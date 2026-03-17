@@ -150,9 +150,11 @@ export function MetricsDashboard() {
     // Lam Research Etch: starts MAINTENANCE with 0%, may become ACTIVE after 2 minutes
     if (etchStatus === "ACTIVE") return;
 
-    const gate = window.setTimeout(() => {
+    let intervalId: number | null = null;
+
+    const gateId = window.setTimeout(() => {
       let attempts = 0;
-      const interval = window.setInterval(() => {
+      intervalId = window.setInterval(() => {
         attempts += 1;
         setEtchStatus((cur) => {
           if (cur === "ACTIVE") return cur;
@@ -166,14 +168,11 @@ export function MetricsDashboard() {
           return cur;
         });
       }, 20_000);
-
-      (gate as any).__interval = interval;
     }, 120_000);
 
     return () => {
-      window.clearTimeout(gate);
-      const interval = (gate as any).__interval as number | undefined;
-      if (interval) window.clearInterval(interval);
+      window.clearTimeout(gateId);
+      if (intervalId != null) window.clearInterval(intervalId);
     };
   }, [etchStatus]);
 

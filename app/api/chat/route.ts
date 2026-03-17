@@ -27,13 +27,6 @@ type GroqChatCompletionResponse = {
 };
 
 export async function POST(req: Request) {
-  console.log(
-    "[/api/chat] GROQ_API_KEY",
-    process.env.GROQ_API_KEY
-      ? `${process.env.GROQ_API_KEY.slice(0, 6)}… (len=${process.env.GROQ_API_KEY.length})`
-      : "(missing)"
-  );
-
   let body: ChatRequestBody | null = null;
   try {
     body = (await req.json()) as ChatRequestBody;
