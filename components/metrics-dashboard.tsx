@@ -231,7 +231,7 @@ export function MetricsDashboard() {
   const totalWafers = useMemo(() => nodes.reduce((acc, n) => acc + n.count, 0), [nodes]);
 
   return (
-    <div className="px-6 py-5 border-b border-border">
+    <div className="px-4 sm:px-6 py-5 border-b border-border">
       {/* Section Title */}
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-[11px] font-medium text-[#444] uppercase tracking-[0.15em]">
@@ -246,7 +246,7 @@ export function MetricsDashboard() {
       </div>
 
       {/* Row 1 - Key Stats */}
-      <div className="grid grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         {/* Process Node */}
         <div className="bg-[#141414] border border-[#222] rounded-lg p-4">
           <p className="text-[11px] text-[#555] mb-2">Active Nodes</p>
@@ -294,7 +294,7 @@ export function MetricsDashboard() {
       </div>
 
       {/* Row 2 - Equipment Panel */}
-      <div className="grid grid-cols-3 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
         {/* ASML EUV Scanner */}
         <div className="bg-[#141414] border border-[#222] rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
@@ -360,7 +360,7 @@ export function MetricsDashboard() {
       </div>
 
       {/* Row 3 - Process Intelligence */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Yield Trend */}
         <div className="bg-[#141414] border border-[#222] rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
