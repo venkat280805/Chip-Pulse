@@ -405,6 +405,8 @@ export function NewsCards({
   const bookmarkedSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
 
   const [articles, setArticles] = useState<NewsArticle[]>(FALLBACK_NEWS);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     onHeadlinesChange?.(articles.map((a) => a.headline).slice(0, 20));
@@ -436,7 +438,7 @@ export function NewsCards({
 
     const fetchOnce = async () => {
       try {
-        const res = await fetch("/api/news", { cache: "no-store" });
+        const res = await fetch(`/api/news?page=1&pageSize=50`, { cache: "no-store" });
         if (!res.ok) throw new Error("news fetch failed");
         const json = (await res.json()) as { articles?: NewsArticle[] };
         const mapped = Array.isArray(json.articles) ? json.articles.slice(0, 20) : [];
@@ -458,6 +460,10 @@ export function NewsCards({
     };
   }, []);
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeCategory, savedOnly, companyFilter, bookmarkedIds]);
+
   const filteredArticles = useMemo(() => {
     const filterLabel = resolveCategoryFilter(activeCategory);
     let items = articles;
@@ -473,17 +479,24 @@ export function NewsCards({
     return items.filter((a) => a.category === filterLabel);
   }, [activeCategory, articles, bookmarkedSet, companyFilter, savedOnly]);
 
-  const [displayedArticles, setDisplayedArticles] = useState<NewsArticle[]>(() => filteredArticles);
+  const totalPages = Math.max(1, Math.ceil(filteredArticles.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedArticles = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredArticles.slice(start, start + pageSize);
+  }, [filteredArticles, safePage]);
+
+  const [displayedArticles, setDisplayedArticles] = useState<NewsArticle[]>(() => pagedArticles);
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     setIsFading(true);
     const t = window.setTimeout(() => {
-      setDisplayedArticles(filteredArticles);
+      setDisplayedArticles(pagedArticles);
       setIsFading(false);
     }, 140);
     return () => window.clearTimeout(t);
-  }, [filteredArticles]);
+  }, [pagedArticles]);
 
   return (
     <div className="p-6">
@@ -496,21 +509,51 @@ export function NewsCards({
               : "No articles in this category"}
         </div>
       ) : (
-        <div
-          className={`grid grid-cols-1 xl:grid-cols-2 gap-4 transition-opacity duration-300 ${
-            isFading ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          {displayedArticles.map((article, index) => (
-            <NewsCard
-              key={`${savedOnly ? "saved" : "all"}-${activeCategory}-${article.id}`}
-              article={article}
-              index={index}
-              bookmarked={bookmarkedSet.has(article.id)}
-              onToggleBookmark={onToggleBookmark}
-            />
-          ))}
-        </div>
+        <>
+          <div
+            className={`grid grid-cols-1 xl:grid-cols-2 gap-4 transition-opacity duration-300 ${
+              isFading ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            {displayedArticles.map((article, index) => (
+              <NewsCard
+                key={`${savedOnly ? "saved" : "all"}-${activeCategory}-${article.id}`}
+                article={article}
+                index={index}
+                bookmarked={bookmarkedSet.has(article.id)}
+                onToggleBookmark={onToggleBookmark}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {filteredArticles.length > pageSize && (
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <div className="text-xs text-[#555555]">
+                Page <span className="text-foreground">{safePage}</span> of{" "}
+                <span className="text-foreground">{totalPages}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="rounded-md border border-[#222222] bg-[#111111] px-3 py-1.5 text-xs text-foreground disabled:opacity-40 disabled:pointer-events-none hover:bg-[#151515] transition-all duration-300"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="rounded-md border border-[#222222] bg-[#111111] px-3 py-1.5 text-xs text-foreground disabled:opacity-40 disabled:pointer-events-none hover:bg-[#151515] transition-all duration-300"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

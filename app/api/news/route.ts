@@ -1,5 +1,9 @@
 export const runtime = "nodejs";
 
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
 type NewsApiArticle = {
   source?: { name?: string | null } | null;
   title?: string | null;
@@ -102,12 +106,16 @@ function formatRelativeTimestamp(iso: string | null | undefined) {
   return `${diffD}d ago`;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const key = process.env.NEWS_API_KEY ?? process.env.NEXT_PUBLIC_NEWS_API_KEY;
   if (!key) return Response.json({ articles: [] }, { headers: { "Cache-Control": "no-store" } });
 
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
+  const pageSize = clamp(Number(searchParams.get("pageSize") ?? "20") || 20, 5, 50);
+
   const res = await fetch(
-    `https://newsapi.org/v2/everything?q=semiconductor+chips+TSMC+NVIDIA+Intel&sortBy=publishedAt&language=en&pageSize=20&apiKey=${key}`,
+    `https://newsapi.org/v2/everything?q=semiconductor+chips+TSMC+NVIDIA+Intel&sortBy=publishedAt&language=en&pageSize=${pageSize}&page=${page}&apiKey=${key}`,
     { cache: "no-store" }
   );
 
@@ -116,6 +124,7 @@ export async function GET() {
   }
 
   const json = (await res.json()) as NewsApiResponse;
+  const totalResults = typeof (json as any).totalResults === "number" ? (json as any).totalResults : 0;
   const mapped = (json.articles ?? [])
     .map((a) => {
       const headline = (a.title ?? "").trim();
@@ -135,8 +144,11 @@ export async function GET() {
       };
     })
     .filter(Boolean)
-    .slice(0, 20);
+    .slice(0, pageSize);
 
-  return Response.json({ articles: mapped }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(
+    { articles: mapped, page, pageSize, totalResults },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
