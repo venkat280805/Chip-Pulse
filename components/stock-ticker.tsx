@@ -38,47 +38,52 @@ type FinnhubQuote = {
 };
 
 export function StockTicker() {
-  const [quotes, setQuotes] = useState<TickerItem[]>(() => {
-    try {
-      const raw = window.localStorage.getItem(CACHE_KEY);
-      if (!raw) return FALLBACK;
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return FALLBACK;
-
-      const items: TickerItem[] = [];
-      for (const row of parsed) {
-        if (
-          row &&
-          typeof row === "object" &&
-          "symbol" in row &&
-          "price" in row &&
-          "changePct" in row
-        ) {
-          const symbol = (row as any).symbol;
-          const price = Number((row as any).price);
-          const changePct = Number((row as any).changePct);
-          if ((SYMBOLS as readonly string[]).includes(symbol) && Number.isFinite(price) && Number.isFinite(changePct)) {
-            items.push({
-              symbol: symbol as SymbolType,
-              price,
-              changePct,
-              positive: changePct >= 0,
-            });
-          }
-        }
-      }
-      if (items.length === SYMBOLS.length) {
-        items.sort((a, b) => SYMBOLS.indexOf(a.symbol) - SYMBOLS.indexOf(b.symbol));
-        return items;
-      }
-      return FALLBACK;
-    } catch {
-      return FALLBACK;
-    }
-  });
+  const [quotes, setQuotes] = useState<TickerItem[]>(FALLBACK);
 
   useEffect(() => {
     let mounted = true;
+
+    // Load last-known prices (client-only) to avoid SSR/prerender crashes on Vercel.
+    try {
+      const raw = window.localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) {
+          const items: TickerItem[] = [];
+          for (const row of parsed) {
+            if (
+              row &&
+              typeof row === "object" &&
+              "symbol" in row &&
+              "price" in row &&
+              "changePct" in row
+            ) {
+              const symbol = (row as any).symbol;
+              const price = Number((row as any).price);
+              const changePct = Number((row as any).changePct);
+              if (
+                (SYMBOLS as readonly string[]).includes(symbol) &&
+                Number.isFinite(price) &&
+                Number.isFinite(changePct)
+              ) {
+                items.push({
+                  symbol: symbol as SymbolType,
+                  price,
+                  changePct,
+                  positive: changePct >= 0,
+                });
+              }
+            }
+          }
+          if (items.length === SYMBOLS.length) {
+            items.sort((a, b) => SYMBOLS.indexOf(a.symbol) - SYMBOLS.indexOf(b.symbol));
+            setQuotes(items);
+          }
+        }
+      }
+    } catch {
+      // ignore malformed storage
+    }
 
     const fetchOnce = async () => {
       try {
