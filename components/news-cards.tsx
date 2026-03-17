@@ -354,17 +354,21 @@ function NewsCard({
             {article.timestamp}
           </span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
           className="text-foreground hover:text-foreground hover:bg-[#1e1e1e] gap-1 h-8 px-3"
-          onClick={() => {
-            if (!article.url || article.url === "#") return;
-            window.open(article.url, "_blank", "noopener,noreferrer");
-          }}
         >
-          Read Full Article
-          <ExternalLink className="h-3 w-3" />
+          <a
+            href={article.url && article.url !== "#" ? article.url : "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={!article.url || article.url === "#" ? "pointer-events-none opacity-60" : undefined}
+          >
+            Read Full Article
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </Button>
       </div>
     </article>
@@ -432,21 +436,10 @@ export function NewsCards({
 
     const fetchOnce = async () => {
       try {
-        const key = process.env.NEXT_PUBLIC_NEWS_API_KEY;
-        if (!key) throw new Error("missing api key");
-
-        const res = await fetch(
-          `https://newsapi.org/v2/everything?q=semiconductor+chips+TSMC+NVIDIA+Intel&sortBy=publishedAt&language=en&apiKey=${key}`,
-          { cache: "no-store" }
-        );
+        const res = await fetch("/api/news", { cache: "no-store" });
         if (!res.ok) throw new Error("news fetch failed");
-        const json = (await res.json()) as NewsApiResponse;
-        if (json.status !== "ok" || !Array.isArray(json.articles)) throw new Error("bad payload");
-
-        const mapped = json.articles
-          .map(mapNewsApiArticle)
-          .filter((x): x is NewsArticle => Boolean(x))
-          .slice(0, 20);
+        const json = (await res.json()) as { articles?: NewsArticle[] };
+        const mapped = Array.isArray(json.articles) ? json.articles.slice(0, 20) : [];
 
         if (!mounted) return;
         if (mapped.length > 0) setArticles(mapped);
